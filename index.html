@@ -263,9 +263,196 @@
             color: #b8b8b8;
             font-size: 0.85rem;
         }
+
+        /* Admin Panel Styles */
+        .admin-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 100%);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
+
+        .admin-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(192, 192, 192, 0.4);
+        }
+
+        .admin-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 999;
+            overflow-y: auto;
+            padding: 80px 20px 40px;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            color: #333;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .admin-header h2 {
+            color: #1a1a2e;
+            font-size: 1.5rem;
+        }
+
+        .entry-count {
+            background: #0f3460;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .close-admin {
+            padding: 8px 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .entries-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .entries-table th,
+        .entries-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .entries-table th {
+            background: #0f3460;
+            color: white;
+            font-weight: 600;
+        }
+
+        .entries-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .entries-table .name-cell {
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .entries-table .email-cell {
+            color: #0f3460;
+        }
+
+        .no-entries {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .entry-details {
+            display: none;
+            background: #f8f9fa;
+            padding: 15px;
+        }
+
+        .entry-details.active {
+            display: table-row;
+        }
+
+        .entry-details td {
+            padding: 20px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border-left: 3px solid #0f3460;
+        }
+
+        .detail-item strong {
+            display: block;
+            color: #666;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+
+        .clear-entries {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .clear-entries:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
+    <!-- Admin Toggle Button -->
+    <button class="admin-toggle" id="adminToggle">Admin Panel</button>
+
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-content">
+            <div class="admin-header">
+                <div>
+                    <h2>Contest Entries</h2>
+                    <span class="entry-count" id="entryCount">0 entries</span>
+                </div>
+                <button class="close-admin" id="closeAdmin">Close</button>
+            </div>
+            <div id="entriesContainer">
+                <p class="no-entries">No entries yet.</p>
+            </div>
+            <button class="clear-entries" id="clearEntries">Clear All Entries</button>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>CRYPTO2METAL</h1>
@@ -375,6 +562,153 @@
     </div>
 
     <script>
+        // Contest Entries Storage
+        const STORAGE_KEY = 'crypto2metal_contest_entries';
+
+        // Get entries from localStorage
+        function getEntries() {
+            const entries = localStorage.getItem(STORAGE_KEY);
+            return entries ? JSON.parse(entries) : [];
+        }
+
+        // Save entries to localStorage
+        function saveEntries(entries) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        }
+
+        // Add a new entry
+        function addEntry(entry) {
+            const entries = getEntries();
+            entry.id = Date.now();
+            entry.submittedAt = new Date().toISOString();
+            entries.push(entry);
+            saveEntries(entries);
+            return entry;
+        }
+
+        // Render entries in admin panel
+        function renderEntries() {
+            const entries = getEntries();
+            const container = document.getElementById('entriesContainer');
+            const countEl = document.getElementById('entryCount');
+
+            countEl.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="no-entries">No entries yet.</p>';
+                return;
+            }
+
+            let html = `
+                <table class="entries-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Contest #</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            entries.forEach((entry, index) => {
+                const date = new Date(entry.submittedAt).toLocaleDateString();
+                const fullName = `${entry.firstName || ''} ${entry.lastName || ''}`.trim() || 'N/A';
+                const email = entry.email || 'N/A';
+
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="name-cell">${escapeHtml(fullName)}</td>
+                        <td class="email-cell">${escapeHtml(email)}</td>
+                        <td>${escapeHtml(entry.contestNumber || 'N/A')}</td>
+                        <td>${date}</td>
+                        <td><button onclick="toggleDetails(${entry.id})" style="padding: 5px 10px; cursor: pointer;">Details</button></td>
+                    </tr>
+                    <tr class="entry-details" id="details-${entry.id}">
+                        <td colspan="6">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <strong>First Name</strong>
+                                    ${escapeHtml(entry.firstName || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Last Name</strong>
+                                    ${escapeHtml(entry.lastName || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Email</strong>
+                                    ${escapeHtml(entry.email || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Phone</strong>
+                                    ${escapeHtml(entry.phone || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Address</strong>
+                                    ${escapeHtml(entry.address || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>City</strong>
+                                    ${escapeHtml(entry.city || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>State</strong>
+                                    ${escapeHtml(entry.state || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Postal Code</strong>
+                                    ${escapeHtml(entry.zip || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Country</strong>
+                                    ${escapeHtml(entry.country || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Wallet Address</strong>
+                                    ${escapeHtml(entry.walletAddress || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Contest Number</strong>
+                                    ${escapeHtml(entry.contestNumber || 'N/A')}
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Newsletter</strong>
+                                    ${entry.newsletter ? 'Yes' : 'No'}
+                                </div>
+                                <div class="detail-item" style="grid-column: 1 / -1;">
+                                    <strong>Comments</strong>
+                                    ${escapeHtml(entry.comments || 'None')}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Toggle entry details
+        function toggleDetails(id) {
+            const detailsRow = document.getElementById(`details-${id}`);
+            if (detailsRow) {
+                detailsRow.classList.toggle('active');
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Form submission handler
         document.getElementById('contestForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -383,7 +717,14 @@
             let isValid = true;
 
             requiredFields.forEach(field => {
-                if (!field.value.trim()) {
+                if (field.type === 'checkbox') {
+                    if (!field.checked) {
+                        isValid = false;
+                        field.style.outline = '2px solid #e74c3c';
+                    } else {
+                        field.style.outline = 'none';
+                    }
+                } else if (!field.value.trim()) {
                     isValid = false;
                     field.style.borderColor = '#e74c3c';
                 } else {
@@ -392,12 +733,66 @@
             });
 
             if (isValid) {
+                // Collect form data
+                const entry = {
+                    firstName: document.getElementById('firstName').value.trim(),
+                    lastName: document.getElementById('lastName').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phone').value.trim(),
+                    address: document.getElementById('address').value.trim(),
+                    city: document.getElementById('city').value.trim(),
+                    state: document.getElementById('state').value.trim(),
+                    zip: document.getElementById('zip').value.trim(),
+                    country: document.getElementById('country').value.trim(),
+                    walletAddress: document.getElementById('walletAddress').value.trim(),
+                    contestNumber: document.getElementById('contestNumber').value.trim(),
+                    comments: document.getElementById('comments').value.trim(),
+                    newsletter: document.getElementById('newsletter').checked
+                };
+
+                // Check for duplicate contest number
+                const existingEntries = getEntries();
+                const duplicateNumber = existingEntries.find(e => e.contestNumber === entry.contestNumber);
+
+                if (duplicateNumber) {
+                    alert(`Contest number ${entry.contestNumber} has already been chosen. Please select a different number.`);
+                    document.getElementById('contestNumber').style.borderColor = '#e74c3c';
+                    document.getElementById('contestNumber').focus();
+                    return;
+                }
+
+                // Save entry
+                addEntry(entry);
+                renderEntries();
+
                 alert('Thank you for your contest entry! We have received your information and will contact you if you are selected as a winner.');
                 this.reset();
             } else {
                 alert('Please fill in all required fields.');
             }
         });
+
+        // Admin panel toggle
+        document.getElementById('adminToggle').addEventListener('click', function() {
+            renderEntries();
+            document.getElementById('adminPanel').classList.add('active');
+        });
+
+        // Close admin panel
+        document.getElementById('closeAdmin').addEventListener('click', function() {
+            document.getElementById('adminPanel').classList.remove('active');
+        });
+
+        // Clear all entries
+        document.getElementById('clearEntries').addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete all entries? This cannot be undone.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderEntries();
+            }
+        });
+
+        // Initialize entries display
+        renderEntries();
     </script>
 </body>
 </html>
